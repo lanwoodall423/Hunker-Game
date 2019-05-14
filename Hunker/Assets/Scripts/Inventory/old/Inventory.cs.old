@@ -1,0 +1,142 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+
+//This class handles the player's inventory
+public class Inventory : MonoBehaviour {
+
+    GameObject slotPanel;
+    public GameObject inventorySlot;
+    public GameObject inventoryItem;
+    ItemDatabase database;
+    public int inventorySize;
+
+    private GameObject dropPrefab;
+
+
+    public List<Item> items = new List<Item>();
+    public List<GameObject> slots = new List<GameObject>();
+
+    private void Start()
+    {
+        database = GetComponent<ItemDatabase>();
+        slotPanel = GameObject.Find("SlotPanel");
+
+        //Create slots
+        for (int i = 0; i < inventorySize; i++)
+        {
+            //Equipment Slot
+            if (i == 0)
+            {
+                items.Add(new Item());
+                slots.Add(Instantiate(inventorySlot));
+                slots[i].GetComponent<ItemSlot>().id = i;
+                slots[i].transform.SetParent(slotPanel.transform);
+            }
+            else
+            {
+                items.Add(new Item());
+                slots.Add(Instantiate(inventorySlot));
+                slots[i].GetComponent<ItemSlot>().id = i;
+                slots[i].transform.SetParent(slotPanel.transform);
+            }
+        }
+
+
+
+        AddItem(0);
+        AddItem(0);
+        AddItem(0);
+
+        AddItem(1);
+        AddItem(1);
+        AddItem(1);
+
+    }
+
+    //Adds an item to the inventory
+    public void AddItem(int id)
+    {
+        Item itemToAdd = database.getItemByID(id);
+        Debug.Log("Item: " + itemToAdd.Title);
+
+        //Check if the item needs to be stacked
+        int itemCheck = checkForItem(itemToAdd);
+        if (itemToAdd.Stackable && itemCheck != -1)
+        {
+            ItemData data = slots[itemCheck].transform.GetChild(0).GetComponent<ItemData>();
+            data.amount++;
+            data.transform.GetChild(0).GetComponent<Text>().text = data.amount.ToString();
+
+        }
+        else // if not stackable, just add the item to the first free slot
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].ID == -1)
+                {
+                    items[i] = itemToAdd;
+                    GameObject itemObject = Instantiate(inventoryItem);
+
+                    //Add the itemID and slotIndex to the item object
+                    itemObject.GetComponent<ItemData>().item = itemToAdd;
+                    itemObject.GetComponent<ItemData>().slot = i;
+
+                    //place the item's sprite in the proper slot
+                    itemObject.transform.SetParent(slots[i].transform, false);
+                    itemObject.GetComponent<Image>().sprite = itemToAdd.Sprite;
+                    itemObject.name = itemToAdd.Title;
+
+                    //Set amount to 1
+                    ItemData data = slots[i].transform.GetChild(0).GetComponent<ItemData>();
+                    data.amount++;
+
+                    break;
+                } else
+                {
+                    Debug.Log("Inventory is full");
+                }
+            }
+        }
+    }
+
+    //Returns item index if the item is in the inventory, else -1
+    int checkForItem(Item item)
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].ID == item.ID)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void dropItem(int slot)
+    {
+        //If not blank
+        if (items[slot].ID != -1)
+        {
+            Debug.Log("Item isn't blank.");
+            //If a gun, pull the prefab for it and instatiate at the player. Then remove item from slot
+            if (items[slot].Type == "weapon")
+            {
+                Debug.Log("Item is a gun.");
+                Weapon gun = items[slot] as Weapon;
+                GameObject theGun = Resources.Load("Prefabs/Weapons/" + gun.PrefabName) as GameObject;
+                Instantiate(theGun);
+                theGun.transform.position = GameObject.Find("Player").transform.position;
+                Debug.Log("New Item???");
+                items[slot] = new Item();
+            }
+        }
+    }
+
+    public void equipItem(int slot)
+    {
+
+    }
+}
